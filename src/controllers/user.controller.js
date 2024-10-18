@@ -3,6 +3,7 @@ import {ApiError} from "../utils/ApiError.js"
 import {User} from "../models/user.model.js"
 import {uploadOnCloudinary} from "../utils/cloudinary.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
+import mongoose from "mongoose"
 
 
 const generateAccessAndRefreshTokens = async (userId) => {
@@ -111,6 +112,7 @@ const loginUser = asyncHandler( async (req,res) => {
     // send cookie
 
     const {username,email,password} = req.body;
+
     
     if(!username && !email){
         throw new ApiError(400,"username or email is required");
@@ -124,16 +126,21 @@ const loginUser = asyncHandler( async (req,res) => {
         throw new ApiError(404,"User doesn't exist")
     }
 
+    // console.log(user);
+
+
     const isPasswordValid = await user.isPasswordCorrect(password)
 
     if(!isPasswordValid){
-        throw new ApiError(4041,"Invalid Credentials")
+        throw new ApiError(404,"Invalid Credentials")
     }
 
     const {accessToken,refreshToken} = await generateAccessAndRefreshTokens(user._id)
 
 
-    const loggedInUser = User.findById(user._id).select(" -password -refreshToken")
+    const loggedInUser = await User.findById(user._id).select(" -password -refreshToken")
+    
+    console.log(loggedInUser);
 
     const options = {
         httpOnly :true,
@@ -142,15 +149,15 @@ const loginUser = asyncHandler( async (req,res) => {
 
     return res
     .status(200)
-    .cookie("accessToken",accessToken,options)
-    .cookie("refreshToken",refreshToken,options)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
     .json(
         new ApiResponse(
-            200,
+            200, 
             {
-                user:loggedInUser,accessToken,refreshToken
+                user: loggedInUser, accessToken, refreshToken
             },
-            "User looged-In successfully"
+            "User logged In Successfully"
         )
     )
 
